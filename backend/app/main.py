@@ -1,40 +1,19 @@
 # app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic_settings import BaseSettings
-import os
 
+from app.core.config import settings
+from app.core.db import init_db
+from app.routers import auth as auth_router
 
-# --------------------------------------------------
-# 1. 读取配置 (.env)
-# --------------------------------------------------
-class Settings(BaseSettings):
-    APP_NAME: str = "EcomSandbox"
-    APP_ENV: str = "dev"
-    APP_DEBUG: bool = True
-    API_PREFIX: str = "/api/v1"
-    CORS_ORIGINS: str = "http://localhost:5173"
-
-    class Config:
-        env_file = ".env"
-
-
-settings = Settings()
-
-
-# --------------------------------------------------
-# 2. 创建 FastAPI 实例
-# --------------------------------------------------
 app = FastAPI(
     title=settings.APP_NAME,
     debug=settings.APP_DEBUG,
     version="0.1.0"
 )
 
-# --------------------------------------------------
-# 3. 跨域配置 (CORS)
-# --------------------------------------------------
-origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",")]
+# CORS
+origins = [o.strip() for o in settings.CORS_ORIGINS.split(",")]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -43,33 +22,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --------------------------------------------------
-# 4. 挂载路由（后续模块会在这里 import）
-# --------------------------------------------------
-# from app.routers import auth, shops, rounds  # 示例：未来逐步引入
-# app.include_router(auth.router, prefix=settings.API_PREFIX)
-# app.include_router(shops.router, prefix=settings.API_PREFIX)
-# app.include_router(rounds.router, prefix=settings.API_PREFIX)
+# 启动时建表 & 种子用户（仅在没有用户时）
+@app.on_event("startup")
+def on_startup():
+    init_db()
+    from app.core.security import get_password_hash
+    from app.models.user import User
+    from app.core.db import engine
+    from sqlmodel import Session, select
 
-# --------------------------------------------------
-# 5. 基础路由：健康检查 & 版本信息
-# --------------------------------------------------
+    with Session(engine) as session:
+        any_user = session.exec(select(User)).first()
+        if not any_user:
+            demo_users = [
+                User(username="teacher1", display_name="Teacher One", email=None,
+                     role="teacher", status="active", password_hash=get_password_hash("teacher123")),
+                User(username="student1", display_name="Student One", email=None,
+                     role="student", status="active", password_hash=get_password_hash("student123")),
+            ]
+            for u in demo_users:
+                session.add(u)
+            session.commit()
+            print("✅ Seeded demo users: teacher1/teacher123, student1/student123")
+
+# 路由挂载
+app.include_router(auth_router.router, prefix=settings.API_PREFIX)
+
+# 基础路由
 @app.get(f"{settings.API_PREFIX}/health", tags=["system"])
-async def health_check():
+def health():
     return {"status": "ok"}
 
 @app.get(f"{settings.API_PREFIX}/version", tags=["system"])
-async def version_info():
-    return {
-        "app": settings.APP_NAME,
-        "env": settings.APP_ENV,
-        "debug": settings.APP_DEBUG,
-        "version": "0.1.0"
-    }
+def version():
+    return {"app": settings.APP_NAME, "env": settings.APP_ENV, "debug": settings.APP_DEBUG, "version": "0.1.0"}
 
-# --------------------------------------------------
-# 6. 根路径（演示）
-# --------------------------------------------------
 @app.get("/", tags=["root"])
-async def root():
+def root():
     return {"message": "Welcome to EcomSandbox FastAPI backend!"}
