@@ -1,11 +1,15 @@
-# Test your FastAPI endpoints
+### 健康检查
+GET http://127.0.0.1:8000/api/v1/health
+Accept: application/json
 
+###
+
+### 版本信息
+GET http://127.0.0.1:8000/api/v1/version
+Accept: application/json
+
+###
+
+### 根路径（测试欢迎语）
 GET http://127.0.0.1:8000/
 Accept: application/json
-
-###
-
-GET http://127.0.0.1:8000/hello/User
-Accept: application/json
-
-###
