@@ -13,6 +13,7 @@ Accept: application/json
 const data = JSON.parse(response.body);
 if (data && data.access_token) {
   client.global.set("access_token", data.access_token);
+  client.log("Saved access_token");
 } else {
   client.log("No access_token in response");
 }
@@ -35,4 +36,63 @@ Accept: application/json
 
 ### 版本信息
 GET http://127.0.0.1:8000/api/v1/version
+Accept: application/json
+
+################################################################
+# ↓↓↓ 新增：Shops 模块接口测试（在已有内容基础上追加）↓↓↓
+################################################################
+
+### 创建店铺（若已存在 active 店铺会返回 400）
+POST http://127.0.0.1:8000/api/v1/shops
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Teacher One Shop",
+  "initial_balance": 1000.50
+}
+
+> {%
+// 保存创建成功的店铺ID，后续查询用
+try {
+  const data = JSON.parse(response.body);
+  if (data && data.id) {
+    client.global.set("shop_id", String(data.id));
+    client.log("Saved shop_id = " + data.id);
+  } else {
+    client.log("No shop id in response (maybe already exists)");
+  }
+} catch(e) {
+  client.log("Create shop response not JSON or error: " + e.message);
+}
+%}
+
+###
+
+### 我的店铺（若无则返回 null）
+GET http://127.0.0.1:8000/api/v1/shops/mine
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
+> {%
+// 如果 mine 返回了店铺，兜底保存 shop_id
+try {
+  const data = JSON.parse(response.body);
+  if (data && data.id) {
+    client.global.set("shop_id", String(data.id));
+    client.log("Ensured shop_id = " + data.id);
+  } else {
+    client.log("No active shop for current user");
+  }
+} catch(e) {
+  client.log("Mine response not JSON or error: " + e.message);
+}
+%}
+
+###
+
+### 按 ID 查看店铺（需要 admin 或店主本人）
+GET http://127.0.0.1:8000/api/v1/shops/{{shop_id}}
+Authorization: Bearer {{access_token}}
 Accept: application/json

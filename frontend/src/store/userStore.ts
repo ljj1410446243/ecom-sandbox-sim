@@ -1,6 +1,5 @@
 import {defineStore} from "pinia";
 import {reactive} from 'vue'
-import {getUserInfo} from "../api";
 
 export const useUserStore=defineStore('user',()=>{
     //state
