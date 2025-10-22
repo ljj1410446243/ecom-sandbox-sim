@@ -8,6 +8,10 @@ const routes=[
     {
         path:'/auth',
         component:()=>import('../views/auth/Index.vue')
+    },
+    {
+        path:'/person',
+        component:()=>import('../views/person/Index.vue')
     }
 ]
 
