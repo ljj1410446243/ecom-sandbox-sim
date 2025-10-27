@@ -10,7 +10,7 @@ const http=axios.create({
 http.interceptors.request.use(config=>{
     console.log( config)
     const token=localStorage.getItem('access_token')
-    const whiteUrl=['/auth/login']
+    const whiteUrl=['/auth/login','/auth/register']
     if(!whiteUrl.includes(config.url)){
         config.headers.Authorization=`Bearer ${token}`
     }
