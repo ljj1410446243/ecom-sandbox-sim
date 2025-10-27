@@ -6,11 +6,11 @@
     <div class="header-right flex-box">
         <el-dropdown>
           <div>
-            <el-avatar> {{ userInfo.username }} </el-avatar>
+            <el-avatar> {{ userStore.userInfo.username }} </el-avatar>
           </div>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item>个人中心</el-dropdown-item>
+              <el-dropdown-item @click="GoToPerson">个人中心</el-dropdown-item>
               <el-dropdown-item @click="handleLogout">登出</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -23,23 +23,25 @@
 import router from "../router";
 import {onMounted, reactive} from "vue";
 import {getUserInfo} from "../api";
-const userInfo=reactive({
-  username:'',
-  status:'',
-  id:'',
-  display_name:'',
-  email:'',
-  role:''
-})
+import {useUserStore} from "../store/userStore.ts";
+
+const userStore=useUserStore()
 
 onMounted(()=>{
   getUserInfo().then(data=>{
-    Object.assign(userInfo, data)
+    Object.assign(userStore.userInfo, data)
+  }).catch(err=>{
+    console.error('获取用户信息失败:', err)
   })
 })
 const handleLogout=()=>{
   localStorage.removeItem('access_token')
-  router.push('/auth')
+  router.push('/auth').then(() => {
+    console.log('登出成功!')
+  })
+}
+const GoToPerson=()=>{
+  router.push('/person')
 }
 </script>
 
