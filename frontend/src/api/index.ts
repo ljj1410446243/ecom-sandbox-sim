@@ -29,3 +29,13 @@ export const getMyShopInfo=()=>{
 export const getShopInfoById=(id:string)=>{
     return request.get(`/shops/${id}`)
 }
+
+//删除店铺
+export const deleteShop=(id:string)=>{
+    return request.delete(`/shops/${id}`)
+}
+
+//修改店铺信息
+export const updateShop=(id:string,data:object)=>{
+    return request.patch(`/shops/${id}`,data)
+}

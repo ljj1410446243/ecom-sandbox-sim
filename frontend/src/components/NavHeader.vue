@@ -1,7 +1,7 @@
 <template>
   <div class="header-container">
     <div class="header-left flex-box">
-      111
+      CEMO Simulation
     </div>
     <div class="header-right flex-box">
         <el-dropdown>
@@ -54,6 +54,11 @@ const GoToPerson=()=>{
 .header-container{
   display: flex;
   justify-content: space-between;
-
+  height:100%;
+}
+.header-left{
+  font-size: 20px;
+  font-weight: bold;
+  margin-left: 20px;
 }
 </style>

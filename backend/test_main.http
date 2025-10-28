@@ -20,19 +20,7 @@ if (data && data.access_token) {
 %}
 
 ###
-### 注册新用户（如重复请手动改用户名/邮箱）
-POST http://127.0.0.1:8000/api/v1/auth/register
-Content-Type: application/json
-Accept: application/json
 
-{
-  "username": "test1",
-  "password": "123456",
-  "display_name": "Test1",
-  "email": "Test1@example.com"
-}
-
-###
 ### 获取当前用户
 GET http://127.0.0.1:8000/api/v1/auth/me
 Accept: application/json
@@ -51,10 +39,10 @@ GET http://127.0.0.1:8000/api/v1/version
 Accept: application/json
 
 ################################################################
-# ↓↓↓ 新增：Shops 模块接口测试（在已有内容基础上追加）↓↓↓
+# ↓↓↓ Shops 模块接口测试 ↓↓↓
 ################################################################
 
-### 创建店铺（若已存在 active 店铺会返回 400）
+### 创建店铺（若已存在多个店铺可重复创建）
 POST http://127.0.0.1:8000/api/v1/shops
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
@@ -66,7 +54,7 @@ Accept: application/json
 }
 
 > {%
-// 保存创建成功的店铺ID，后续查询用
+// 保存创建成功的店铺ID，后续查询/修改/删除使用
 try {
   const data = JSON.parse(response.body);
   if (data && data.id) {
@@ -82,20 +70,20 @@ try {
 
 ###
 
-### 我的店铺（若无则返回 null）
+### 我的所有店铺（可选：?status=active / closed）
 GET http://127.0.0.1:8000/api/v1/shops/mine
 Authorization: Bearer {{access_token}}
 Accept: application/json
 
 > {%
-// 如果 mine 返回了店铺，兜底保存 shop_id
+// 如果返回列表非空，兜底保存第一个店铺ID
 try {
-  const data = JSON.parse(response.body);
-  if (data && data.id) {
-    client.global.set("shop_id", String(data.id));
-    client.log("Ensured shop_id = " + data.id);
+  const list = JSON.parse(response.body);
+  if (Array.isArray(list) && list.length > 0 && list[0].id) {
+    client.global.set("shop_id", String(list[0].id));
+    client.log("Ensured shop_id = " + list[0].id);
   } else {
-    client.log("No active shop for current user");
+    client.log("No shops for current user");
   }
 } catch(e) {
   client.log("Mine response not JSON or error: " + e.message);
@@ -108,3 +96,102 @@ try {
 GET http://127.0.0.1:8000/api/v1/shops/{{shop_id}}
 Authorization: Bearer {{access_token}}
 Accept: application/json
+
+################################################################
+# ↓↓↓ 新增：更新店铺（PATCH）与删除店铺（DELETE）↓↓↓
+################################################################
+
+### 更新店铺名称（PATCH）
+PATCH http://127.0.0.1:8000/api/v1/shops/{{shop_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Teacher One Shop - Renamed"
+}
+
+###
+
+### 验证更新后的店铺（GET by id）
+GET http://127.0.0.1:8000/api/v1/shops/{{shop_id}}
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
+###
+
+### 更新店铺状态为 closed（PATCH）
+PATCH http://127.0.0.1:8000/api/v1/shops/{{shop_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "status": "closed"
+}
+
+###
+
+### 按状态筛选我的店铺（仅 closed）
+GET http://127.0.0.1:8000/api/v1/shops/mine?status=closed
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
+###
+
+### 删除店铺（DELETE，幂等：不存在也返回 204）
+DELETE http://127.0.0.1:8000/api/v1/shops/{{shop_id}}
+Authorization: Bearer {{access_token}}
+
+###
+
+### 尝试再次获取被删除的店铺（应返回 404）
+GET http://127.0.0.1:8000/api/v1/shops/{{shop_id}}
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
+################################################################
+# ↓↓↓ Auth 注册相关测试（保留）↓↓↓
+################################################################
+
+### 注册新用户（如重复请改用户名/邮箱）
+POST http://127.0.0.1:8000/api/v1/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "username": "new_user_01",
+  "password": "abc12345",
+  "display_name": "New User 01",
+  "email": "new_user_01@example.com"
+}
+
+###
+
+### 用新用户登录（另存 token 为 {{register_access_token}}）
+POST http://127.0.0.1:8000/api/v1/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "username": "new_user_01",
+  "password": "abc12345"
+}
+
+> {%
+// 保存注册用户的 token 到单独变量，避免影响 teacher1 的 {{access_token}}
+const data = JSON.parse(response.body);
+if (data && data.access_token) {
+  client.global.set("register_access_token", data.access_token);
+  client.log("Saved register_access_token");
+} else {
+  client.log("No access_token in response");
+}
+%}
+
+###
+
+### 获取“注册用户”的当前用户信息
+GET http://127.0.0.1:8000/api/v1/auth/me
+Accept: application/json
+Authorization: Bearer {{register_access_token}}
