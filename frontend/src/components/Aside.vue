@@ -24,7 +24,6 @@
               :key="child.index"
               :index="child.path"
               :route="child.path"
-
             >
               {{child.title}}
             </el-menu-item>
@@ -56,7 +55,6 @@ const route=useRoute()
 const menuStore=useMenuStore()
 
 const activeIndex = computed(() => route.path);
-
 
 const handleOpen = () => {
 

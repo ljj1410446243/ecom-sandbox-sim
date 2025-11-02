@@ -1,31 +1,18 @@
 import {createRouter, createWebHashHistory} from 'vue-router'
 
+const pages=import.meta.glob('../views/**/*.vue')
 
 const routes=[
     {
         path:"/",
+        redirect:'/home',
         component:()=>import('../views/Main.vue'),
         children:[
-            {
-                path:'/home',
-                component:()=>import('../views/home/Index.vue'),
-                meta:{title:'首页'}
-            },
-            {
-                path:'/tasks',
-                component:()=>import('../views/tasks/Index.vue'),
-                meta:{title:'任务'}
-            },
-            {
-                path:'/purchase',
-                component:()=>import('../views/purchase/Index.vue'),
-                meta:{title:'采购管理'}
-            },
-            {
-                path:'/myShop',
-                component:()=>import('../views/myShop/Index.vue'),
-                meta:{title:'我的店铺'}
-            },
+            {path:'/home',component:()=>import('../views/home/Index.vue')},
+            {path:'/tasks',component:()=>import('../views/tasks/Index.vue')},
+            {path:'/purchase',component:()=>import('../views/purchase/Index.vue')},
+            {path:'/myShop',component:()=>import('../views/myShop/Shops.vue')},
+            {path:'/myShop/:shopId',component:()=>import('../views/myShop/Index.vue')}
         ]
     },
     {
@@ -42,7 +29,6 @@ const router=createRouter({
     routes,
     history:createWebHashHistory()
 })
-
 
 
 export default router
