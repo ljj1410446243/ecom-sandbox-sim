@@ -9,13 +9,13 @@ Accept: application/json
 }
 
 > {%
-// 从响应里取出 access_token，保存为全局变量，后续请求可直接用 {{access_token}}
+// 保存 access_token
 const data = JSON.parse(response.body);
 if (data && data.access_token) {
   client.global.set("access_token", data.access_token);
   client.log("Saved access_token");
 } else {
-  client.log("No access_token in response");
+  throw new Error("No access_token in response. Check credentials.");
 }
 %}
 
@@ -38,30 +38,29 @@ Accept: application/json
 GET http://127.0.0.1:8000/api/v1/version
 Accept: application/json
 
+
 ################################################################
-# ↓↓↓ Shops 模块接口测试 ↓↓↓
+# ↓↓↓ Shops 模块接口测试（保留且优化：不删除主店铺）↓↓↓
 ################################################################
 
-### 创建店铺（若已存在多个店铺可重复创建）
+### 创建店铺（主店铺，后续 listings 将复用）
 POST http://127.0.0.1:8000/api/v1/shops
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
 Accept: application/json
 
 {
-  "name": "Teacher One Shop",
+  "name": "Teacher Main Shop",
   "initial_balance": 1000.50
 }
 
 > {%
-// 保存创建成功的店铺ID，后续查询/修改/删除使用
+// 保存主店铺ID
 try {
   const data = JSON.parse(response.body);
   if (data && data.id) {
     client.global.set("shop_id", String(data.id));
     client.log("Saved shop_id = " + data.id);
-  } else {
-    client.log("No shop id in response (maybe already exists)");
   }
 } catch(e) {
   client.log("Create shop response not JSON or error: " + e.message);
@@ -70,36 +69,32 @@ try {
 
 ###
 
-### 我的所有店铺（可选：?status=active / closed）
+### 我的所有店铺（兜底确保拿到一个 shop_id）
 GET http://127.0.0.1:8000/api/v1/shops/mine
 Authorization: Bearer {{access_token}}
 Accept: application/json
 
 > {%
-// 如果返回列表非空，兜底保存第一个店铺ID
-try {
-  const list = JSON.parse(response.body);
-  if (Array.isArray(list) && list.length > 0 && list[0].id) {
+// 若上一请求未保存，则这里确保设置 shop_id
+const list = JSON.parse(response.body);
+if (Array.isArray(list) && list.length > 0) {
+  if (!client.global.get("shop_id") && list[0].id) {
     client.global.set("shop_id", String(list[0].id));
     client.log("Ensured shop_id = " + list[0].id);
-  } else {
-    client.log("No shops for current user");
   }
-} catch(e) {
-  client.log("Mine response not JSON or error: " + e.message);
+} else {
+  throw new Error("当前用户没有店铺。请先创建店铺再继续。");
 }
 %}
 
 ###
 
-### 按 ID 查看店铺（需要 admin 或店主本人）
+### 按 ID 查看店铺（需要店主或 admin）
 GET http://127.0.0.1:8000/api/v1/shops/{{shop_id}}
 Authorization: Bearer {{access_token}}
 Accept: application/json
 
-################################################################
-# ↓↓↓ 新增：更新店铺（PATCH）与删除店铺（DELETE）↓↓↓
-################################################################
+###
 
 ### 更新店铺名称（PATCH）
 PATCH http://127.0.0.1:8000/api/v1/shops/{{shop_id}}
@@ -108,7 +103,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "name": "Teacher One Shop - Renamed"
+  "name": "Teacher Main Shop - Renamed"
 }
 
 ###
@@ -139,59 +134,205 @@ Accept: application/json
 
 ###
 
-### 删除店铺（DELETE，幂等：不存在也返回 204）
-DELETE http://127.0.0.1:8000/api/v1/shops/{{shop_id}}
+### 将店铺状态改回 active（为后续 listings 使用）
+PATCH http://127.0.0.1:8000/api/v1/shops/{{shop_id}}
 Authorization: Bearer {{access_token}}
-
-###
-
-### 尝试再次获取被删除的店铺（应返回 404）
-GET http://127.0.0.1:8000/api/v1/shops/{{shop_id}}
-Authorization: Bearer {{access_token}}
-Accept: application/json
-
-################################################################
-# ↓↓↓ Auth 注册相关测试（保留）↓↓↓
-################################################################
-
-### 注册新用户（如重复请改用户名/邮箱）
-POST http://127.0.0.1:8000/api/v1/auth/register
 Content-Type: application/json
 Accept: application/json
 
 {
-  "username": "new_user_01",
-  "password": "abc12345",
-  "display_name": "New User 01",
-  "email": "new_user_01@example.com"
+  "status": "active"
 }
 
-###
 
-### 用新用户登录（另存 token 为 {{register_access_token}}）
-POST http://127.0.0.1:8000/api/v1/auth/login
+################################################################
+# ↓↓↓ Products 模块（全局商品库；按你给的结构：product_code/name/base_cost）↓↓↓
+################################################################
+
+### 创建商品（全局商品库）
+POST http://127.0.0.1:8000/api/v1/products
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 Accept: application/json
 
 {
-  "username": "new_user_01",
-  "password": "abc12345"
+  "product_code": "PCODE-001",
+  "name": "Global Product A",
+  "category": "CategoryA",
+  "base_cost": 88.80
 }
 
 > {%
-// 保存注册用户的 token 到单独变量，避免影响 teacher1 的 {{access_token}}
-const data = JSON.parse(response.body);
-if (data && data.access_token) {
-  client.global.set("register_access_token", data.access_token);
-  client.log("Saved register_access_token");
-} else {
-  client.log("No access_token in response");
+// 保存 product_id
+try {
+  const data = JSON.parse(response.body);
+  if (data && data.id) {
+    client.global.set("product_id", String(data.id));
+    client.log("Saved product_id = " + data.id);
+  }
+} catch(e) {
+  client.log("Create product response not JSON: " + e.message);
 }
 %}
 
 ###
 
-### 获取“注册用户”的当前用户信息
-GET http://127.0.0.1:8000/api/v1/auth/me
+### 列出商品（支持 q / category / 分页）
+GET http://127.0.0.1:8000/api/v1/products?q=PCODE-001&page=1&page_size=10
+Authorization: Bearer {{access_token}}
 Accept: application/json
-Authorization: Bearer {{register_access_token}}
+
+###
+
+### 按 ID 获取商品
+GET http://127.0.0.1:8000/api/v1/products/{{product_id}}
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
+###
+
+### 更新商品（PATCH）
+PATCH http://127.0.0.1:8000/api/v1/products/{{product_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Global Product A (Updated)",
+  "base_cost": 90.00
+}
+
+###
+
+### 再查一次（验证更新）
+GET http://127.0.0.1:8000/api/v1/products/{{product_id}}
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
+
+################################################################
+# ↓↓↓ Listings 模块（店铺上架：关联 shop_id + product_id）↓↓↓
+################################################################
+
+### 创建上架（listing）：把全局商品挂到我的店铺
+POST http://127.0.0.1:8000/api/v1/listings
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "shop_id": {{shop_id}},
+  "product_id": {{product_id}},
+  "price": 199.99,
+  "marketing_budget": 50.00,
+  "status": "active"
+}
+
+> {%
+// 保存 listing_id
+try {
+  const data = JSON.parse(response.body);
+  if (data && data.id) {
+    client.global.set("listing_id", String(data.id));
+    client.log("Saved listing_id = " + data.id);
+  }
+} catch(e) {
+  client.log("Create listing response not JSON: " + e.message);
+}
+%}
+
+###
+
+### 列出我的上架（可选：?shop_id={{shop_id}}&product_id={{product_id}}）
+GET http://127.0.0.1:8000/api/v1/listings?shop_id={{shop_id}}&page=1&page_size=20
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
+###
+
+### 按 ID 获取 listing
+GET http://127.0.0.1:8000/api/v1/listings/{{listing_id}}
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
+###
+
+### 更新 listing（价格/预算/状态）
+PATCH http://127.0.0.1:8000/api/v1/listings/{{listing_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "price": 189.90,
+  "marketing_budget": 60.00,
+  "status": "inactive"
+}
+
+###
+
+### 再查一次 listing（验证更新）
+GET http://127.0.0.1:8000/api/v1/listings/{{listing_id}}
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
+###
+
+### 删除 listing（DELETE）
+DELETE http://127.0.0.1:8000/api/v1/listings/{{listing_id}}
+Authorization: Bearer {{access_token}}
+
+###
+
+### 再次获取 listing（应返回 404）
+GET http://127.0.0.1:8000/api/v1/listings/{{listing_id}}
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
+
+################################################################
+# ↓↓↓ 清理演示：删除“临时店铺”和“商品”等（可选）↓↓↓
+################################################################
+
+### （可选）创建一个临时店铺，并立即删除，避免影响主店铺
+POST http://127.0.0.1:8000/api/v1/shops
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Temp Shop To Delete",
+  "initial_balance": 10
+}
+
+> {%
+// 保存临时店铺ID
+try {
+  const data = JSON.parse(response.body);
+  if (data && data.id) {
+    client.global.set("temp_shop_id", String(data.id));
+    client.log("Saved temp_shop_id = " + data.id);
+  }
+} catch(e) {
+  client.log("Create temp shop response not JSON: " + e.message);
+}
+%}
+
+###
+
+### 删除临时店铺（DELETE，幂等）
+DELETE http://127.0.0.1:8000/api/v1/shops/{{temp_shop_id}}
+Authorization: Bearer {{access_token}}
+
+###
+
+### 删除商品（确保已无 listing 引用后再删）
+DELETE http://127.0.0.1:8000/api/v1/products/{{product_id}}
+Authorization: Bearer {{access_token}}
+
+###
+
+### 再次获取商品（应返回 404）
+GET http://127.0.0.1:8000/api/v1/products/{{product_id}}
+Authorization: Bearer {{access_token}}
+Accept: application/json

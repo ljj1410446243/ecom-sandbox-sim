@@ -6,6 +6,8 @@ from app.core.config import settings
 from app.core.db import init_db
 from app.routers import auth as auth_router
 from app.routers import shops as shops_router
+from app.routers import products as products_router
+from app.routers import listings as listings_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -49,6 +51,8 @@ def on_startup():
 # 路由挂载
 app.include_router(auth_router.router, prefix=settings.API_PREFIX)
 app.include_router(shops_router.router, prefix=settings.API_PREFIX)
+app.include_router(products_router.router, prefix=settings.API_PREFIX)
+app.include_router(listings_router.router, prefix=settings.API_PREFIX)
 
 # 基础路由
 @app.get(f"{settings.API_PREFIX}/health", tags=["system"])
