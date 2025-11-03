@@ -1,6 +1,5 @@
 import {createRouter, createWebHashHistory} from 'vue-router'
 
-const pages=import.meta.glob('../views/**/*.vue')
 
 const routes=[
     {

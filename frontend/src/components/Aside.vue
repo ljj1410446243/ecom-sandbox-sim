@@ -6,6 +6,7 @@
         :default-active="activeIndex"
         router
         text-color="#fff"
+        :key="menuKey"
         @open="handleOpen"
         @close="handleClose"
       >
@@ -49,12 +50,19 @@
 <script setup lang="ts">
 import {useMenuStore} from "../store/menuStore.ts";
 import {useRoute} from "vue-router";
-import {computed} from "vue";
+import {computed, ref, watch} from "vue";
 
 const route=useRoute()
 const menuStore=useMenuStore()
+const menuKey = ref(0) // 用于强制重新渲染的 key
 
-const activeIndex = computed(() => route.path);
+
+// 使用计算属性获取当前激活的菜单项
+const activeIndex = computed(() => {
+  console.log('当前路由路径:', route.path)
+  console.log('当前路由参数:', route.params)
+  return route.path
+});
 
 const handleOpen = () => {
 

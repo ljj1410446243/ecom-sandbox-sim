@@ -58,9 +58,7 @@ export const useMenuStore=defineStore('menu',()=>{
                 index:'4-2',
                 title:currentShop.value.name,
                 icon:'Shop',
-                children:[
-                    {index:'4-2-1',title:currentShop.value.name,path:`/myShop/${currentShop.value.id}`},
-                ]
+                path:`/myShop/${currentShop.value.id}`
             })
         }
         menus.value=updatedMenus
