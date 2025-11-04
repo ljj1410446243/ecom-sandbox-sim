@@ -341,3 +341,55 @@ Accept: application/json
 GET http://127.0.0.1:8000/api/v1/products
 Authorization: Bearer {{access_token}}
 Accept: application/json
+
+
+################################################################
+# ↓↓↓ Inventory 模块（库存）↓↓↓
+################################################################
+
+### 设置库存为 100（PUT：不存在则创建）
+PUT http://127.0.0.1:8000/api/v1/inventory/{{shop_id}}/{{product_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "on_hand_qty": 100
+}
+
+###
+
+### 查询库存（GET）
+GET http://127.0.0.1:8000/api/v1/inventory/{{shop_id}}/{{product_id}}
+Authorization: Bearer {{access_token}}
+Accept: application/json
+
+###
+
+### 增加库存 25（PATCH）
+PATCH http://127.0.0.1:8000/api/v1/inventory/{{shop_id}}/{{product_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "delta": 25
+}
+
+###
+
+### 减少库存 60（PATCH）
+PATCH http://127.0.0.1:8000/api/v1/inventory/{{shop_id}}/{{product_id}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "delta": -60
+}
+
+###
+
+### 删除库存记录（DELETE）
+DELETE http://127.0.0.1:8000/api/v1/inventory/{{shop_id}}/{{product_id}}
+Authorization: Bearer {{access_token}}
