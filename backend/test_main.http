@@ -336,3 +336,8 @@ Authorization: Bearer {{access_token}}
 GET http://127.0.0.1:8000/api/v1/products/{{product_id}}
 Authorization: Bearer {{access_token}}
 Accept: application/json
+
+### 获取所有商品（不分页，用于管理或调试）
+GET http://127.0.0.1:8000/api/v1/products
+Authorization: Bearer {{access_token}}
+Accept: application/json

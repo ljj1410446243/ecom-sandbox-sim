@@ -71,6 +71,24 @@ def list_products(
     return [_to_out(p) for p in rows]
 
 
+# 获取所有商品（不分页、仅用于管理或测试）
+@router.get("/", response_model=List[ProductOut])
+def get_all_products(
+    session: Session = Depends(get_session),
+    _=Depends(get_current_user),
+):
+    rows = session.exec(select(Product).order_by(Product.id.asc())).all()
+    return [
+        ProductOut(
+            id=p.id,
+            product_code=p.product_code,
+            name=p.name,
+            category=p.category,
+            base_cost=p.base_cost,
+        )
+        for p in rows
+    ]
+
 @router.get("/{product_id}", response_model=ProductOut)
 def get_product(
     product_id: int,
@@ -134,3 +152,5 @@ def delete_product(
             detail="Product is used by listings and cannot be deleted",
         )
     return
+
+

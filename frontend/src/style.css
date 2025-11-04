@@ -50,3 +50,8 @@ body {
     justify-content: end;
   }
 }
+
+.flex-box{
+  display: flex;
+  align-items: center;
+}

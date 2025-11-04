@@ -80,8 +80,9 @@ interface shopInfo {
   id: number;
   name: string;
   status: string;
-  cash_balance: number;
-  created_at: string;
+  cash_balance: string; // 改为 string 类型
+  owner_user_id: number;
+  created_at?: string; // 设为可选字段
 }
 
 const shopList=ref<shopInfo[]>([])
@@ -103,16 +104,15 @@ const rules={
 }
 
 //获取店铺信息
-const fetchShopInfo=()=>{
-  getMyShopInfo().then((data:shopInfo[])=>{
-    console.log('获取店铺信息成功:', data)
-    shopList.value=data
-    console.log('店铺列表:', shopList.value)
-  }).catch(err=>{
+const fetchShopInfo = () => {
+  getMyShopInfo().then((res: shopInfo[]) => {
+    shopList.value = res
+  }).catch(err => {
     console.error('获取店铺信息失败:', err)
     ElMessage.error('获取店铺信息失败')
   })
 }
+
 
 //创建店铺
 const handleCreateShop=()=>{

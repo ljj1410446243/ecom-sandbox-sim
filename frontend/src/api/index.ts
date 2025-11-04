@@ -39,3 +39,48 @@ export const deleteShop=(id:string)=>{
 export const updateShop=(id:string,data:object)=>{
     return request.patch(`/shops/${id}`,data)
 }
+
+//创建商品
+export const createProduct=(data:object)=>{
+    return request.post('/products',data)
+}
+
+//删除商品
+export const deleteProduct=(id:string)=>{
+    return request.delete(`/products/${id}`)
+}
+
+//获取所有商品
+export const getProducts=()=>{
+    return request.get('/products')
+}
+
+//按照ID获取商品信息
+export const getProductInfoById=(id:string)=>{
+    return request.get(`/products/${id}`)
+}
+
+//更新商品
+export const updateProduct=(id:string,data:object)=>{
+    return request.patch(`/products/${id}`,data)
+}
+
+//上架商品
+export const putProductOnSale=(data:object)=>{
+    return request.post(`/listings`,data)
+}
+
+//按ID查询上架商品
+export const getProductOnSaleById=(id:string)=>{
+    return request.get(`/listings/${id}`)
+}
+
+//更新上架商品
+export const updateProductOnSale=(id:string,data:object)=>{
+    return request.patch(`/listings/${id}`,data)
+}
+
+//删除上架商品
+export const deleteProductOnSale=(id:string)=>{
+    return request.delete(`/listings/${id}`)
+}
