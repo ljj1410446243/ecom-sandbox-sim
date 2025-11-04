@@ -1,67 +1,87 @@
 # app/routers/inventory.py
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session, select
 
 from app.core.db import get_session
 from app.models.inventory import Inventory
-from app.models.shop import Shop
+from app.models.product import Product
 from app.models.user import User, RoleEnum
-# ↓↓↓ 这里改：不再导入 InventoryCreate
 from app.schemas.inventory import InventoryOut, InventorySetInput, InventoryAdjustInput
 from app.utils.deps import get_current_user
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
 
-def _assert_owner_or_admin(user: User, shop: Shop):
-    if user.role != RoleEnum.admin and shop.owner_user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+def _admin_only(user: User):
+    if user.role != RoleEnum.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
 
 
-def _get_or_404(session: Session, shop_id: int, product_id: int) -> Inventory:
-    inv = session.exec(
-        select(Inventory).where(Inventory.shop_id == shop_id, Inventory.product_id == product_id)
-    ).first()
+def _get_by_product_or_404(session: Session, product_id: int) -> Inventory:
+    inv = session.exec(select(Inventory).where(Inventory.product_id == product_id)).first()
     if not inv:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inventory not found")
     return inv
 
 
-@router.get("/{shop_id}/{product_id}", response_model=InventoryOut)
+@router.get("", response_model=List[InventoryOut])
+def list_inventory(
+    q: Optional[str] = Query(default=None, description="按 product_code 或 name 模糊搜索"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=200),
+    session: Session = Depends(get_session),
+    _user: User = Depends(get_current_user),
+):
+    # 先选出符合条件的产品ID（若 q 为空则不限定）
+    if q:
+        like = f"%{q}%"
+        p_stmt = select(Product.id).where(
+            (Product.product_code.ilike(like)) | (Product.name.ilike(like))
+        )
+        # 注意：这里直接就是 List[int]
+        product_ids: List[int] = session.exec(p_stmt).all()
+        if not product_ids:
+            return []
+        i_stmt = select(Inventory).where(Inventory.product_id.in_(product_ids))
+    else:
+        i_stmt = select(Inventory)
+
+    i_stmt = (
+        i_stmt.order_by(Inventory.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    rows = session.exec(i_stmt).all()
+    return rows
+
+
+@router.get("/{product_id}", response_model=InventoryOut)
 def get_inventory(
-    shop_id: int,
     product_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    _user: User = Depends(get_current_user),
 ):
-    shop = session.get(Shop, shop_id)
-    if not shop:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shop not found")
-    _assert_owner_or_admin(current_user, shop)
-
-    inv = _get_or_404(session, shop_id, product_id)
+    inv = _get_by_product_or_404(session, product_id)
     return inv
 
 
-@router.put("/{shop_id}/{product_id}", response_model=InventoryOut)
+@router.put("/{product_id}", response_model=InventoryOut)
 def set_inventory(
-    shop_id: int,
     product_id: int,
-    body: InventorySetInput,  # ← 这里用 InventorySetInput
+    body: InventorySetInput,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
-    shop = session.get(Shop, shop_id)
-    if not shop:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shop not found")
-    _assert_owner_or_admin(current_user, shop)
+    _admin_only(user)
 
-    inv = session.exec(
-        select(Inventory).where(Inventory.shop_id == shop_id, Inventory.product_id == product_id)
-    ).first()
+    # 保证商品存在（可选但推荐）
+    if not session.get(Product, product_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
 
+    inv = session.exec(select(Inventory).where(Inventory.product_id == product_id)).first()
     if inv is None:
-        inv = Inventory(shop_id=shop_id, product_id=product_id, on_hand_qty=body.on_hand_qty)
+        inv = Inventory(product_id=product_id, on_hand_qty=body.on_hand_qty)
         session.add(inv)
     else:
         inv.on_hand_qty = body.on_hand_qty
@@ -71,20 +91,16 @@ def set_inventory(
     return inv
 
 
-@router.patch("/{shop_id}/{product_id}", response_model=InventoryOut)
+@router.patch("/{product_id}", response_model=InventoryOut)
 def adjust_inventory(
-    shop_id: int,
     product_id: int,
-    body: InventoryAdjustInput,  # ← 这里用 InventoryAdjustInput
+    body: InventoryAdjustInput,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
-    shop = session.get(Shop, shop_id)
-    if not shop:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Shop not found")
-    _assert_owner_or_admin(current_user, shop)
+    _admin_only(user)
 
-    inv = _get_or_404(session, shop_id, product_id)
+    inv = _get_by_product_or_404(session, product_id)
     new_qty = inv.on_hand_qty + body.delta
     if new_qty < 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Resulting quantity cannot be negative")
@@ -96,25 +112,17 @@ def adjust_inventory(
     return inv
 
 
-@router.delete("/{shop_id}/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_inventory(
-    shop_id: int,
     product_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
-    shop = session.get(Shop, shop_id)
-    if not shop:
-        return  # 幂等
+    _admin_only(user)
 
-    _assert_owner_or_admin(current_user, shop)
-
-    inv = session.exec(
-        select(Inventory).where(Inventory.shop_id == shop_id, Inventory.product_id == product_id)
-    ).first()
+    inv = session.exec(select(Inventory).where(Inventory.product_id == product_id)).first()
     if not inv:
         return  # 幂等
-
     session.delete(inv)
     session.commit()
     return

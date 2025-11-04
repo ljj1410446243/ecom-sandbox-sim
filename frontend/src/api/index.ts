@@ -84,3 +84,28 @@ export const updateProductOnSale=(id:string,data:object)=>{
 export const deleteProductOnSale=(id:string)=>{
     return request.delete(`/listings/${id}`)
 }
+
+//设置库存
+export const setInventory=(productId:string,data:object)=>{
+    return request.put(`/inventory/${productId}`,data)
+}
+
+//查询特定商品库存
+export const getInventoryById=(productId:string)=>{
+    return request.get(`/inventory/${productId}`)
+}
+
+//查询所有库存
+export const getInventory=()=>{
+    return request.get(`/inventory`)
+}
+
+//增减库存量
+export const updateInventory=(productId:string,data:object)=>{
+    return request.patch(`/inventory/${productId}`,data)
+}
+
+//删除库存记录
+export const deleteInventory=(productId:string)=>{
+    return request.delete(`/inventory/${productId}`)
+}

@@ -1,25 +1,5 @@
-<script setup lang="ts">
-const props = defineProps<{
-  product: {
-    id:string
-    name:string
-    product_code:string
-    category:string
-    base_cost:string
-  }
-}>()
-</script>
 
 <template>
-<!--  <el-card class="product-card" :body-style="{ padding: '20px' }">-->
-<!--&lt;!&ndash;    <el-image :src="props.product.image" fit="cover" class="product-image" />&ndash;&gt;-->
-<!--    <div class="product-info">-->
-<!--      <div class="product-title">{{ props.product.name }}</div>-->
-<!--      <div class="product-code">{{ props.product.product_code }}</div>-->
-<!--      <el-tag class="product-category">{{ props.product.category }}</el-tag>-->
-<!--      <div class="product-price">￥{{ props.product.base_cost }}</div>-->
-<!--    </div>-->
-<!--  </el-card>-->
   <div class="container">
 	<!-- code here -->
 	<div class="card">
@@ -35,9 +15,48 @@ const props = defineProps<{
 				￥{{ props.product.base_cost }}
 			</p>
 		</div>
+    <div class="card-footer">
+      <!-- 购物车操作区域 -->
+      <div class="cart-actions">
+        <div class="quantity-selector">
+          <el-input-number
+              v-model="quantity"
+              :min="1"
+              :max="999"
+              size="small"
+              controls-position="right"
+          />
+        </div>
+        <el-button
+            type="primary"
+            size="small"
+            @click="addToInventory"
+            class="add-to-cart-btn"
+        >
+            购入仓库
+        </el-button>
+      </div>
+    </div>
 	</div>
 </div>
 </template>
+<script setup lang="ts">
+import {setInventory} from "../api";
+
+const props = defineProps<{
+  product: {
+    id:string
+    name:string
+    product_code:string
+    category:string
+    base_cost:string
+  }
+}>()
+
+const addToInventory = () => {
+  setInventory()
+}
+</script>
 
 <style lang="less" scoped>
 
@@ -76,6 +95,11 @@ body {
 
 .card-body {
 	padding: 1.5rem;
+  margin: 1.5rem;
+  height: 25%;
+}
+.card-footer {
+  margin: 1.5rem;
 }
 
 .card-title {
@@ -100,7 +124,7 @@ body {
 .container {
   margin-bottom: 50px;
 	width: 100%;
-  height: 250px;
+  height: 500px;
 	display: flex;
 	align-items: center;
 	justify-content: center;

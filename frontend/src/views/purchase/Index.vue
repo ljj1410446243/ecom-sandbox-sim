@@ -15,7 +15,7 @@
     <!-- 商品列表 -->
     <div class="product-list">
       <el-row :gutter="20">
-        <el-col :span="6" v-for="product in productList" :key="product.id" >
+        <el-col :span="8" v-for="product in productList" :key="product.id" >
           <ProductCard :product="product" />
         </el-col>
       </el-row>

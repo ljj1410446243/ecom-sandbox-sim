@@ -18,9 +18,6 @@
             <el-button type="danger" @click="handleDelete(shop.id)">删除</el-button>
           </el-col>
         </el-row>
-
-
-
       </el-card>
     </div>
 
@@ -77,12 +74,12 @@ const menuStore=useMenuStore()
 
 // 店铺信息接口定义
 interface shopInfo {
-  id: number;
+  id: string;
   name: string;
   status: string;
-  cash_balance: string; // 改为 string 类型
+  cash_balance: string;
   owner_user_id: number;
-  created_at?: string; // 设为可选字段
+  created_at?: string;
 }
 
 const shopList=ref<shopInfo[]>([])

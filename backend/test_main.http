@@ -344,11 +344,11 @@ Accept: application/json
 
 
 ################################################################
-# ↓↓↓ Inventory 模块（库存）↓↓↓
+# ↓↓↓ Inventory 模块（全局库存，按商品维度）↓↓↓
 ################################################################
 
-### 设置库存为 100（PUT：不存在则创建）
-PUT http://127.0.0.1:8000/api/v1/inventory/{{shop_id}}/{{product_id}}
+### 设置某商品库存为 100（PUT：不存在则创建）— 仅 admin
+PUT http://127.0.0.1:8000/api/v1/inventory/{{product_id}}
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
 Accept: application/json
@@ -359,15 +359,15 @@ Accept: application/json
 
 ###
 
-### 查询库存（GET）
-GET http://127.0.0.1:8000/api/v1/inventory/{{shop_id}}/{{product_id}}
+### 查询某商品库存（GET）
+GET http://127.0.0.1:8000/api/v1/inventory/{{product_id}}
 Authorization: Bearer {{access_token}}
 Accept: application/json
 
 ###
 
-### 增加库存 25（PATCH）
-PATCH http://127.0.0.1:8000/api/v1/inventory/{{shop_id}}/{{product_id}}
+### 增加该商品库存 25（PATCH）— 仅 admin
+PATCH http://127.0.0.1:8000/api/v1/inventory/{{product_id}}
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
 Accept: application/json
@@ -378,8 +378,8 @@ Accept: application/json
 
 ###
 
-### 减少库存 60（PATCH）
-PATCH http://127.0.0.1:8000/api/v1/inventory/{{shop_id}}/{{product_id}}
+### 减少该商品库存 60（PATCH）— 仅 admin
+PATCH http://127.0.0.1:8000/api/v1/inventory/{{product_id}}
 Authorization: Bearer {{access_token}}
 Content-Type: application/json
 Accept: application/json
@@ -390,6 +390,14 @@ Accept: application/json
 
 ###
 
-### 删除库存记录（DELETE）
-DELETE http://127.0.0.1:8000/api/v1/inventory/{{shop_id}}/{{product_id}}
+### 列出所有库存（支持 q=product_code 或 name，分页）
+GET http://127.0.0.1:8000/api/v1/inventory?q=PCODE&page=1&page_size=100
 Authorization: Bearer {{access_token}}
+Accept: application/json
+
+###
+
+### 删除该商品的库存记录（DELETE）— 仅 admin
+DELETE http://127.0.0.1:8000/api/v1/inventory/{{product_id}}
+Authorization: Bearer {{access_token}}
+
